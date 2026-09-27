@@ -1,8 +1,5 @@
-using System;
-
 namespace Badminton
 {
-    // Lớp cha Abstract
     public abstract class DichVu
     {
         public string MaDV { get; }
@@ -20,8 +17,6 @@ namespace Badminton
 
         public abstract string LoaiSanPham();
     }
-
-    // Lớp con 1: Nước uống
     public class NuocUong : DichVu 
     { 
         public NuocUong(string ma, string ten, double gia, int ton = 999) 
@@ -29,8 +24,6 @@ namespace Badminton
 
         public override string LoaiSanPham() => "Nước uống"; 
     }
-
-    // Lớp con 2: Đồ ăn
     public class DoAn : DichVu 
     { 
         public DoAn(string ma, string ten, double gia, int ton = 999) 
@@ -38,8 +31,6 @@ namespace Badminton
 
         public override string LoaiSanPham() => "Đồ ăn"; 
     }
-
-    // Lớp con 3: Thuê dụng cụ
     public class ThueDungCu : DichVu 
     { 
         public string TinhTrang { get; set; }
@@ -52,8 +43,6 @@ namespace Badminton
 
         public override string LoaiSanPham() => "Thuê dụng cụ"; 
     }
-
-    // Lớp con 4: Phụ kiện
     public class PhuKien : DichVu 
     { 
         public PhuKien(string ma, string ten, double gia, int ton = 999) 
