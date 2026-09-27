@@ -1,15 +1,17 @@
-namespace Badminton;
-public abstract class DichVu
+namespace Badminton
 {
-    protected string maDV;
-    protected string tenDV;
-    protected double donGia;
-    public DichVu(string maDV, string tenDV, double donGia)
+    // 1. Abstract Class DichVu
+    public abstract class DichVu
     {
-        this.maDV=maDV;
-        this.tenDV=tenDV;
-        this.donGia=donGia;
-    }
-    public double GetDonGia() => donGia;
-    public string GetTenDv() => tenDV;
-}
+        public string MaDV { get; }
+        public string TenDV { get; }
+        public double DonGia { get; }
+        public int SoLuongTon { get; set; }
+
+        public DichVu(string ma, string ten, double gia, int tonKho = 999)
+        {
+            MaDV = ma;
+            TenDV = ten;
+            DonGia = gia;
+            SoLuongTon = tonKho;
+        }
