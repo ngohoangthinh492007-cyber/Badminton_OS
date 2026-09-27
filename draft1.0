@@ -1,0 +1,314 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+namespace BadmintonManagement
+{
+    // ==========================================
+    // 1. NHÓM QUẢN LÝ SỰ KIỆN (EVENT-DRIVEN)
+    // ==========================================
+    public interface IEvent { string GetEventName(); }
+
+    public class TaoBillThanhCongEvent : IEvent 
+    {
+        public KhachHang KhachHang { get; }
+        public double TongTienDaThu { get; }
+        public TaoBillThanhCongEvent(KhachHang khachHang, double tongTien) { KhachHang = khachHang; TongTienDaThu = tongTien; }
+        public string GetEventName() => "TaoBillThanhCong";
+    }
+
+    public interface IEventListener { void HandleEvent(IEvent e); }
+
+    public class TichDiemListener : IEventListener 
+    {
+        public void HandleEvent(IEvent e) 
+        {
+            if (e is TaoBillThanhCongEvent billEvent) 
+            {
+                int diemThuong = (int)(billEvent.TongTienDaThu / 10000);
+                billEvent.KhachHang.TichDiem(diemThuong);
+            }
+        }
+    }
+
+    public static class EventDispatcher 
+    {
+        private static List<IEventListener> listeners = new List<IEventListener>();
+        public static void DangKy(IEventListener listener) => listeners.Add(listener);
+        public static void PhatSuKien(IEvent e) { foreach (var listener in listeners) listener.HandleEvent(e); }
+    }
+
+    // ==========================================
+    // 2. NHÓM PHƯƠNG THỨC THANH TOÁN
+    // ==========================================
+    public interface IThanhToan 
+    {
+        bool ThucHienThanhToan(double tongTien);
+        string LayTenPhuongThuc();
+    }
+
+    public class ThanhToanTienMat : IThanhToan 
+    {
+        public bool ThucHienThanhToan(double tongTien) { Console.WriteLine($"[Tiền mặt] Nhận {tongTien:N0} VNĐ."); return true; }
+        public string LayTenPhuongThuc() => "Tiền mặt";
+    }
+
+    public class ThanhToanChuyenKhoan : IThanhToan 
+    {
+        public bool ThucHienThanhToan(double tongTien) { Console.WriteLine($"[Chuyển khoản] Nhận {tongTien:N0} VNĐ qua QR."); return true; }
+        public string LayTenPhuongThuc() => "Chuyển khoản";
+    }
+    
+    public class ThanhToanLoi : IThanhToan 
+    {
+        public bool ThucHienThanhToan(double tongTien) { Console.WriteLine($"[Lỗi] Thẻ ngân hàng bị từ chối."); return false; }
+        public string LayTenPhuongThuc() => "Thẻ tín dụng (Lỗi)";
+    }
+
+    // ==========================================
+    // 3. NHÓM ĐỐI TƯỢNG CON NGƯỜI
+    // ==========================================
+    public abstract class KhachHang 
+    {
+        public string MaKH { get; }
+        public string HoTen { get; }
+        protected int diemTichLuy = 0;
+
+        public KhachHang(string ma, string ten) { MaKH = ma; HoTen = ten; }
+        public void TichDiem(int diem) => diemTichLuy += diem;
+        public abstract double TinhGiaSauChietKhau(double giaGoc);
+    }
+
+    public class KhachVangLai : KhachHang 
+    {
+        public KhachVangLai(string ma, string ten) : base(ma, ten) { }
+        public override double TinhGiaSauChietKhau(double giaGoc) => giaGoc; 
+    }
+
+    public class KhachThanhVien : KhachHang 
+    {
+        private double tiLeGiamGia;
+        private double mucToiThieuDeGiam; // Ràng buộc giảm giá điều kiện
+
+        public KhachThanhVien(string ma, string ten, double tiLe, double mucToiThieu) : base(ma, ten) 
+        {
+            tiLeGiamGia = tiLe;
+            mucToiThieuDeGiam = mucToiThieu;
+        }
+        public override double TinhGiaSauChietKhau(double giaGoc) 
+        {
+            if (giaGoc >= mucToiThieuDeGiam) return giaGoc * (1 - tiLeGiamGia);
+            return giaGoc; 
+        }
+    }
+
+    // ==========================================
+    // 4. NHÓM SẢN PHẨM / DỊCH VỤ (4 LOẠI)
+    // ==========================================
+    public abstract class DichVu 
+    {
+        public string MaDV { get; }
+        public string TenDV { get; }
+        public double DonGia { get; }
+        public int SoLuongTon { get; set; }
+
+        public DichVu(string ma, string ten, double gia, int tonKho = 999) 
+        { 
+            MaDV = ma; TenDV = ten; DonGia = gia; SoLuongTon = tonKho; 
+        }
+        public abstract string LoaiSanPham();
+    }
+
+    public class NuocUong : DichVu { public NuocUong(string ma, string ten, double gia, int ton) : base(ma, ten, gia, ton) { } public override string LoaiSanPham() => "Nước uống"; }
+    public class DoAn : DichVu { public DoAn(string ma, string ten, double gia, int ton) : base(ma, ten, gia, ton) { } public override string LoaiSanPham() => "Đồ ăn"; }
+    public class ThueDungCu : DichVu { public ThueDungCu(string ma, string ten, double gia, int ton) : base(ma, ten, gia, ton) { } public override string LoaiSanPham() => "Thuê dụng cụ"; }
+    public class PhuKien : DichVu { public PhuKien(string ma, string ten, double gia, int ton) : base(ma, ten, gia, ton) { } public override string LoaiSanPham() => "Phụ kiện"; }
+
+    // ==========================================
+    // 5. NHÓM NGHIỆP VỤ (SÂN, PHIẾU, HÓA ĐƠN)
+    // ==========================================
+    public class SanCauLong 
+    {
+        public string MaSan { get; }
+        public double GiaThueMoiGio { get; }
+        public SanCauLong(string ma, double gia) { MaSan = ma; GiaThueMoiGio = gia; }
+    }
+
+    public class PhieuDatSan 
+    {
+        public KhachHang KhachHang { get; }
+        public SanCauLong San { get; }
+        public double SoGioThue { get; }
+        public bool LaGioVang { get; } // Yêu cầu phụ phí điều kiện
+
+        public PhieuDatSan(KhachHang khach, SanCauLong san, double soGio, bool laGioVang = false)
+        {
+            KhachHang = khach; San = san; SoGioThue = soGio; LaGioVang = laGioVang;
+        }
+        
+        public double TinhTienSan() 
+        {
+            double tienBase = San.GiaThueMoiGio * SoGioThue;
+            return LaGioVang ? tienBase * 1.2 : tienBase; // Phụ phí 20% nếu là giờ vàng
+        }
+    }
+
+    public class HoaDon 
+    {
+        public string MaHD { get; }
+        public PhieuDatSan Phieu { get; }
+        public List<DichVu> DanhSachDichVu { get; } = new List<DichVu>();
+        public string TrangThai { get; private set; } = "CHUA_THANH_TOAN";
+        private IThanhToan phuongThucThanhToan;
+
+        public HoaDon(string maHD, PhieuDatSan phieu) { MaHD = maHD; Phieu = phieu; }
+
+        public void ThemDichVu(DichVu dv)
+        {
+            if (dv.SoLuongTon <= 0) 
+            {
+                Console.WriteLine($"[Từ chối] Không thể thêm '{dv.TenDV}' - Đã hết hàng trong kho!");
+                return;
+            }
+            dv.SoLuongTon--;
+            DanhSachDichVu.Add(dv);
+        }
+
+        public void XoaDichVu(DichVu dv)
+        {
+            if (DanhSachDichVu.Contains(dv)) 
+            {
+                DanhSachDichVu.Remove(dv);
+                dv.SoLuongTon++;
+            }
+        }
+
+        public void ChonPhuongThucThanhToan(IThanhToan hinhThuc) => phuongThucThanhToan = hinhThuc;
+
+        public double TinhTongTien() 
+        {
+            double tienSan = Phieu.TinhTienSan();
+            double tienDV = DanhSachDichVu.Sum(d => d.DonGia);
+            return Phieu.KhachHang.TinhGiaSauChietKhau(tienSan + tienDV);
+        }
+
+        public void XuatHoaDonVaThanhToan()
+        {
+            Console.WriteLine($"\n--- HÓA ĐƠN {MaHD} ---");
+            Console.WriteLine($"Khách hàng: {Phieu.KhachHang.HoTen}");
+            
+            double tienSan = Phieu.TinhTienSan();
+            Console.WriteLine($"Tiền sân ({Phieu.SoGioThue}h {(Phieu.LaGioVang ? "- Có phụ phí giờ vàng" : "")}): {tienSan:N0}đ");
+
+            double tienDichVu = 0;
+            foreach (var dv in DanhSachDichVu) 
+            {
+                Console.WriteLine($" + {dv.TenDV}: {dv.DonGia:N0}đ");
+                tienDichVu += dv.DonGia;
+            }
+
+            double tongGoc = tienSan + tienDichVu;
+            double tongPhaiTra = TinhTongTien();
+            
+            if (tongGoc > tongPhaiTra) Console.WriteLine($"Chiết khấu thành viên: -{tongGoc - tongPhaiTra:N0}đ");
+            Console.WriteLine($"TỔNG CỘNG: {tongPhaiTra:N0}đ");
+
+            if (phuongThucThanhToan == null) { Console.WriteLine("Lỗi: Chưa chọn thanh toán!"); return; }
+
+            bool isSuccess = phuongThucThanhToan.ThucHienThanhToan(tongPhaiTra);
+            if (isSuccess)
+            {
+                TrangThai = "DA_THANH_TOAN";
+                EventDispatcher.PhatSuKien(new TaoBillThanhCongEvent(Phieu.KhachHang, tongPhaiTra));
+            }
+            else TrangThai = "THAT_BAI";
+            Console.WriteLine($"Trạng thái bill: {TrangThai}");
+        }
+
+        public void HuyHoaDon() => TrangThai = "DA_HUY";
+    }
+
+    // ==========================================
+    // MAIN PROGRAM - KIỂM THỬ YÊU CẦU ĐỀ BÀI
+    // ==========================================
+    public class Program
+    {
+        public static void Main()
+        {
+            EventDispatcher.DangKy(new TichDiemListener());
+            List<HoaDon> heThongHoaDon = new List<HoaDon>();
+
+            // 1. Chuẩn bị Dữ liệu mẫu (>= 3 khách, >= 8 sản phẩm / 4 loại)
+            var khVangLai1 = new KhachVangLai("KH01", "Nguyễn Văn Trôi");
+            var khVangLai2 = new KhachVangLai("KH02", "Lê Thị Bềnh");
+            var khVIP = new KhachThanhVien("KH03", "Trần Đại Gia", 0.1, 500000); // Giảm 10% nếu > 500k
+
+            var d1 = new NuocUong("SP01", "Bò Húc", 20000, 50);
+            var d2 = new NuocUong("SP02", "Nước Suối", 10000, 100);
+            var d3 = new DoAn("SP03", "Xúc Xích Nướng", 15000, 20);
+            var d4 = new DoAn("SP04", "Mì Tôm Trứng", 30000, 30);
+            var d5 = new ThueDungCu("SP05", "Thuê Vợt Yonex", 50000, 5);
+            var d6 = new ThueDungCu("SP06", "Thuê Giày Cầu Lông", 40000, 10);
+            var d7 = new PhuKien("SP07", "Quấn cán vợt", 15000, 100);
+            var d8 = new PhuKien("SP08", "Ống cầu Tiến Bộ", 180000, 0); // Tồn kho = 0 để test từ chối
+
+            var sanA = new SanCauLong("S01", 100000);
+
+            Console.WriteLine("====== BẮT ĐẦU KIỂM THỬ CÁC TÌNH HUỐNG ======");
+
+            // Tình huống 1: Bill VIP, có phụ phí giờ vàng, có giảm giá, thanh toán thành công
+            var p1 = new PhieuDatSan(khVIP, sanA, 4, laGioVang: true); 
+            var bill1 = new HoaDon("HD001", p1);
+            bill1.ThemDichVu(d1); bill1.ThemDichVu(d5); bill1.ThemDichVu(d5);
+            bill1.XoaDichVu(d5); // Test sửa/xóa dòng sản phẩm
+            bill1.ChonPhuongThucThanhToan(new ThanhToanChuyenKhoan());
+            bill1.XuatHoaDonVaThanhToan();
+            heThongHoaDon.Add(bill1);
+
+            // Tình huống 2: Bill thêm sản phẩm bị từ chối (hết hàng)
+            var p2 = new PhieuDatSan(khVangLai1, sanA, 1);
+            var bill2 = new HoaDon("HD002", p2);
+            bill2.ThemDichVu(d8); // Ống cầu tồn kho = 0 -> Sẽ in ra từ chối
+            bill2.ThemDichVu(d2);
+            bill2.ChonPhuongThucThanhToan(new ThanhToanTienMat());
+            bill2.XuatHoaDonVaThanhToan();
+            heThongHoaDon.Add(bill2);
+
+            // Tình huống 3: Bill thanh toán thất bại 
+            var p3 = new PhieuDatSan(khVangLai2, sanA, 2);
+            var bill3 = new HoaDon("HD003", p3);
+            bill3.ThemDichVu(d4);
+            bill3.ChonPhuongThucThanhToan(new ThanhToanLoi());
+            bill3.XuatHoaDonVaThanhToan();
+            heThongHoaDon.Add(bill3);
+
+            // ==========================================
+            // BÁO CÁO CUỐI CÙNG
+            // ==========================================
+            Console.WriteLine("\n====== BÁO CÁO TỔNG KẾT ======");
+            
+            // 1. Tổng doanh thu (chỉ tính PAID)
+            double tongDoanhThu = heThongHoaDon.Where(h => h.TrangThai == "DA_THANH_TOAN").Sum(h => h.TinhTongTien());
+            Console.WriteLine($"1. Tổng doanh thu (Các đơn đã thu tiền): {tongDoanhThu:N0}đ");
+
+            // 2. Top 3 sản phẩm bán chạy nhất
+            Console.WriteLine("2. Top 3 sản phẩm bán chạy:");
+            var topSp = heThongHoaDon
+                .Where(h => h.TrangThai == "DA_THANH_TOAN")
+                .SelectMany(h => h.DanhSachDichVu)
+                .GroupBy(d => d.TenDV)
+                .Select(g => new { Ten = g.Key, SoLuong = g.Count() })
+                .OrderByDescending(x => x.SoLuong)
+                .Take(3);
+            foreach (var sp in topSp) Console.WriteLine($"   - {sp.Ten}: {sp.SoLuong} lượt mua");
+
+            // 3. Danh sách đơn chưa thanh toán / Thất bại
+            Console.WriteLine("3. Danh sách đơn chưa thanh toán/thất bại:");
+            var donChuaThanhToan = heThongHoaDon.Where(h => h.TrangThai != "DA_THANH_TOAN");
+            foreach (var don in donChuaThanhToan)
+            {
+                Console.WriteLine($"   - Mã đơn: {don.MaHD} | Khách: {don.Phieu.KhachHang.HoTen} | Trạng thái: {don.TrangThai}");
+            }
+        }
+    }
+}
