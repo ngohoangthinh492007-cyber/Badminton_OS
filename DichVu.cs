@@ -1,6 +1,8 @@
+using System;
+
 namespace Badminton
 {
-    // 1. Abstract Class DichVu
+    // Lớp cha Abstract
     public abstract class DichVu
     {
         public string MaDV { get; }
@@ -8,10 +10,55 @@ namespace Badminton
         public double DonGia { get; }
         public int SoLuongTon { get; set; }
 
-        public DichVu(string ma, string ten, double gia, int tonKho = 999)
-        {
-            MaDV = ma;
-            TenDV = ten;
-            DonGia = gia;
-            SoLuongTon = tonKho;
+        public DichVu(string ma, string ten, double gia, int tonKho = 999) 
+        { 
+            MaDV = ma; 
+            TenDV = ten; 
+            DonGia = gia; 
+            SoLuongTon = tonKho; 
         }
+
+        public abstract string LoaiSanPham();
+    }
+
+    // Lớp con 1: Nước uống
+    public class NuocUong : DichVu 
+    { 
+        public NuocUong(string ma, string ten, double gia, int ton = 999) 
+            : base(ma, ten, gia, ton) { } 
+
+        public override string LoaiSanPham() => "Nước uống"; 
+    }
+
+    // Lớp con 2: Đồ ăn
+    public class DoAn : DichVu 
+    { 
+        public DoAn(string ma, string ten, double gia, int ton = 999) 
+            : base(ma, ten, gia, ton) { } 
+
+        public override string LoaiSanPham() => "Đồ ăn"; 
+    }
+
+    // Lớp con 3: Thuê dụng cụ
+    public class ThueDungCu : DichVu 
+    { 
+        public string TinhTrang { get; set; }
+
+        public ThueDungCu(string ma, string ten, double gia, int ton = 999, string tinhTrang = "Mới") 
+            : base(ma, ten, gia, ton) 
+        { 
+            TinhTrang = tinhTrang;
+        } 
+
+        public override string LoaiSanPham() => "Thuê dụng cụ"; 
+    }
+
+    // Lớp con 4: Phụ kiện
+    public class PhuKien : DichVu 
+    { 
+        public PhuKien(string ma, string ten, double gia, int ton = 999) 
+            : base(ma, ten, gia, ton) { } 
+
+        public override string LoaiSanPham() => "Phụ kiện"; 
+    }
+}
